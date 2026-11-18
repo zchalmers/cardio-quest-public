@@ -1,0 +1,114 @@
+workflows:
+  ios-build:
+    name: Cardio Quest iOS
+    max_build_duration: 30
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Clean and get Flutter packages
+        script: |
+          set -euo pipefail
+          flutter clean
+          flutter pub get
+      - name: Build unsigned Release app
+        script: |
+          set -euo pipefail
+
+          # SideStore must sign Runner and all nested dynamic code with the
+          # same personal-development identity. An ad-hoc Codemagic signature
+          # has no matching Team ID and is not a substitute.
+          #
+          # Generate Flutter's Xcode files first, then invoke Xcode explicitly.
+          # This prevents an ambient/scheme Debug action from overriding the
+          # requested Flutter mode and gives the app a mode-specific output path.
+          PROJECT_DIRECTORY="${CM_BUILD_DIR:-$PWD}"
+          IOS_BUILD_DIRECTORY="$PROJECT_DIRECTORY/build/ios"
+          XCODE_DERIVED_DATA="$PROJECT_DIRECTORY/build/xcode-derived-data"
+
+          export FLUTTER_BUILD_MODE=release
+          flutter build ios --release --no-codesign --config-only
+
+          xcrun xcodebuild \
+            -workspace "$PROJECT_DIRECTORY/ios/Runner.xcworkspace" \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$XCODE_DERIVED_DATA" \
+            BUILD_DIR="$IOS_BUILD_DIRECTORY" \
+            FLUTTER_BUILD_MODE=release \
+            ENABLE_DEBUG_DYLIB=NO \
+            ENABLE_PREVIEWS=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            build
+      - name: Verify Release app and package IPA
+        script: |
+          set -euo pipefail
+
+          PROJECT_DIRECTORY="${CM_BUILD_DIR:-$PWD}"
+          APP="$PROJECT_DIRECTORY/build/ios/Release-iphoneos/Runner.app"
+          OUTPUT_IPA="$PROJECT_DIRECTORY/build/artifacts/CardioQuest.ipa"
+          STAGING_DIRECTORY="$(mktemp -d)"
+          trap 'rm -rf "$STAGING_DIRECTORY"' EXIT
+
+          fail() {
+            echo "Release verification failed: $*" >&2
+            exit 1
+          }
+
+          test -f "$APP/Runner"
+          test -f "$APP/Frameworks/App.framework/App"
+          test -f "$APP/Frameworks/Flutter.framework/Flutter"
+
+          FLUTTER_INFO="$APP/Frameworks/Flutter.framework/Info.plist"
+          APP_INFO="$APP/Info.plist"
+          BUILD_MODE="$(
+            /usr/libexec/PlistBuddy -c 'Print :BuildMode' "$FLUTTER_INFO" \
+              2>/dev/null || true
+          )"
+          test "$BUILD_MODE" = release ||
+            fail "Flutter.framework BuildMode is '$BUILD_MODE', not 'release'."
+
+          test ! -e "$APP/Runner.debug.dylib" ||
+            fail 'Runner.debug.dylib is present.'
+          test ! -e "$APP/__preview.dylib" ||
+            fail '__preview.dylib is present.'
+          if otool -L "$APP/Runner" | grep -Eq 'Runner\.debug\.dylib|__preview\.dylib'; then
+            fail 'Runner links a debug or preview dylib.'
+          fi
+
+          if /usr/libexec/PlistBuddy -c 'Print :NSBonjourServices' \
+            "$APP_INFO" >/dev/null 2>&1; then
+            fail 'NSBonjourServices is present.'
+          fi
+          if /usr/libexec/PlistBuddy -c 'Print :NSLocalNetworkUsageDescription' \
+            "$APP_INFO" >/dev/null 2>&1; then
+            fail 'NSLocalNetworkUsageDescription is present.'
+          fi
+
+          FLUTTER_ASSETS="$APP/Frameworks/App.framework/flutter_assets"
+          for JIT_ARTIFACT in \
+            kernel_blob.bin \
+            vm_snapshot_data \
+            isolate_snapshot_data; do
+            test ! -e "$FLUTTER_ASSETS/$JIT_ARTIFACT" ||
+              fail "$JIT_ARTIFACT is present (the Dart app is not AOT release)."
+          done
+
+          mkdir -p "$(dirname "$OUTPUT_IPA")"
+          rm -f "$OUTPUT_IPA"
+          mkdir -p "$STAGING_DIRECTORY/Payload"
+          ditto "$APP" "$STAGING_DIRECTORY/Payload/Runner.app"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$STAGING_DIRECTORY/Payload" "$OUTPUT_IPA"
+
+          unzip -tqq "$OUTPUT_IPA"
+          unzip -Z1 "$OUTPUT_IPA" |
+            grep -x 'Payload/Runner.app/Runner' >/dev/null
+          echo 'Verified a Flutter/Xcode Release build with no Dart VM service.'
+    artifacts:
+      - build/artifacts/CardioQuest.ipa

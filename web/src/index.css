@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #f6fafc;
+  background: #0b1c29;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: #0b1c29;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 84% -10%, rgba(101, 242, 208, 0.08), transparent 34rem),
+    radial-gradient(circle at 6% 74%, rgba(184, 161, 255, 0.055), transparent 32rem),
+    #0b1c29;
+}
+
+button,
+a,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible {
+  outline: 2px solid #65f2d0;
+  outline-offset: 3px;
+}
+
+::selection {
+  color: #07131f;
+  background: #65f2d0;
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(7, 19, 31, 0.4);
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(169, 186, 200, 0.28);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(169, 186, 200, 0.48);
+  background-clip: padding-box;
+}
+
+.recharts-surface:focus {
+  outline: none;
+}
+
+.glass-panel {
+  border: 1px solid rgba(169, 186, 200, 0.12);
+  background:
+    linear-gradient(145deg, rgba(23, 48, 68, 0.74), rgba(13, 32, 47, 0.86));
+  box-shadow: 0 18px 50px rgba(2, 10, 18, 0.22);
+  backdrop-filter: blur(18px);
+}
+
+.glass-panel::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.04), transparent 30%);
+  content: '';
+}
+
+.page-enter {
+  animation: fade-up 400ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

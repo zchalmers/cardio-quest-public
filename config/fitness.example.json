@@ -1,0 +1,17 @@
+{
+  "STRAVA_CLIENT_ID": "",
+  "STRAVA_CLIENT_SECRET": "",
+  "STRAVA_REDIRECT_URI": "cardioquest://cardioquest.app/oauth/strava",
+  "GARMIN_CLIENT_ID": "",
+  "GARMIN_CLIENT_SECRET": "",
+  "GARMIN_REDIRECT_URI": "cardioquest://cardioquest.app/oauth/garmin",
+  "GARMIN_AUTHORIZATION_URL": "",
+  "GARMIN_TOKEN_URL": "",
+  "GARMIN_REVOCATION_URL": "",
+  "GARMIN_PROFILE_URL": "",
+  "GARMIN_UPLOAD_URL": "",
+  "GARMIN_UPLOAD_STATUS_URL": "",
+  "GARMIN_SCOPES": "activity:write profile:read",
+  "GARMIN_UPLOAD_FORMAT": "fit",
+  "GARMIN_UPLOAD_FILE_FIELD": "file"
+}
